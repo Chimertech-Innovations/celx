@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy-50: #f0f6fc;
+  --color-navy-100: #e1edf8;
+  --color-navy-200: #b9d8f3;
+  --color-navy-300: #7ebae9;
+  --color-navy-400: #3c9bda;
+  --color-navy-500: #1a7fc5;
+  --color-navy-600: #0d63a5;
+  --color-navy-700: #0c4f84;
+  --color-navy-800: #0b436c;
+  --color-navy-900: #002d62;
+  --color-navy-950: #002047;
+
+  --color-teal-50: #f0f9ff;
+  --color-teal-100: #e0f2fe;
+  --color-teal-200: #bae6fd;
+  --color-teal-300: #7dd3fc;
+  --color-teal-400: #38bdf8;
+  --color-teal-500: #0284c7;
+  --color-teal-600: #0369a1;
+  --color-teal-700: #075985;
+  --color-teal-800: #0c4a6e;
+  --color-teal-900: #0f172a;
+}
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 220 85% 25%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 173 80% 36%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 220 85% 25%;
+  --radius: 0.5rem;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Academic Typography */
+.prose-academic {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  line-height: 1.8;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Status badge utilities */
+.status-draft { @apply bg-gray-100 text-gray-700 border border-gray-200; }
+.status-submitted { @apply bg-blue-50 text-blue-700 border border-blue-200; }
+.status-accepted { @apply bg-green-50 text-green-700 border border-green-200; }
+.status-rejected { @apply bg-red-50 text-red-700 border border-red-200; }
+.status-published { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
+
+/* Dashboard sidebar */
+.sidebar-link {
+  @apply flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors;
+}
+.sidebar-link-active {
+  @apply flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium bg-navy-50 text-navy-700 border-r-2 border-navy-600;
+}
+
+/* Hero gradient */
+.hero-gradient {
+  background: linear-gradient(135deg, #002d62 0%, #0b436c 50%, #0c4f84 100%);
+}
+
+.hero-image-bg {
+  position: relative;
+  background-image: linear-gradient(to right, rgba(0, 45, 98, 0.95) 0%, rgba(0, 45, 98, 0.8) 50%, rgba(0, 45, 98, 0.4) 100%), url('/microbiology-hero.png');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Card hover */
+.card-hover {
+  @apply transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+}
+
+/* Print styles */
+@media print {
+  .no-print { display: none !important; }
+}
+
+@keyframes morph {
+  0% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+  50% {
+    border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+  }
+  100% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+}
+
+.animate-morph {
+  animation: morph 8s ease-in-out infinite;
+}
+

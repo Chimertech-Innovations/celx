@@ -1,0 +1,623 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==================== ENUMS ====================
+
+enum UserRoleEnum {
+  READER
+  AUTHOR
+  REVIEWER
+  ASSOCIATE_EDITOR
+  EDITOR_IN_CHIEF
+  EDITORIAL_OFFICE
+  PRODUCTION_EDITOR
+  FINANCE_ADMIN
+  JOURNAL_ADMIN
+  SUPER_ADMIN
+  SERVICE_CUSTOMER
+  SERVICE_TEAM
+}
+
+enum ManuscriptStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_TECHNICAL_CHECK
+  UNDER_EDITORIAL_SCREENING
+  REVIEWER_INVITED
+  UNDER_REVIEW
+  REVIEWS_COMPLETED
+  DECISION_PENDING
+  REVISION_REQUESTED
+  REVISED_MANUSCRIPT_SUBMITTED
+  ACCEPTED
+  REJECTED
+  TRANSFERRED
+  IN_PRODUCTION
+  PROOF_SENT_TO_AUTHOR
+  PROOF_APPROVED
+  PUBLISHED
+  WITHDRAWN
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  COMPLETED
+}
+
+enum ReviewRecommendation {
+  ACCEPT
+  MINOR_REVISION
+  MAJOR_REVISION
+  REJECT
+  TRANSFER
+}
+
+enum DecisionType {
+  ACCEPT
+  MINOR_REVISION
+  MAJOR_REVISION
+  REJECT
+  TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  WAIVER_REQUESTED
+  WAIVER_APPROVED
+  FAILED
+  REFUNDED
+}
+
+enum ServiceStatus {
+  REQUESTED
+  QUOTE_SENT
+  PAYMENT_PENDING
+  IN_PROGRESS
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum ServiceType {
+  ENGLISH_EDITING
+  STATISTICAL_ANALYSIS
+  SCHEMATIC_DIAGRAM
+  SCIENTIFIC_EDITING
+  MANUSCRIPT_FORMATTING
+  COVER_LETTER
+  REVIEWER_RESPONSE
+}
+
+enum NotificationCategory {
+  SUBMISSION
+  TECHNICAL_CHECK
+  REVIEWER_INVITATION
+  REVIEW_SUBMITTED
+  EDITORIAL_DECISION
+  ACCEPTANCE
+  REJECTION
+  INVOICE
+  PUBLICATION
+  SERVICE_ORDER
+  GENERAL
+}
+
+enum ArticleType {
+  ORIGINAL_RESEARCH
+  REVIEW_ARTICLE
+  CASE_REPORT
+  SHORT_COMMUNICATION
+  LETTER_TO_EDITOR
+  EDITORIAL
+  COMMENTARY
+  OPINION
+  TECHNICAL_NOTE
+  CONFERENCE_PAPER
+  BOOK_REVIEW
+}
+
+enum OpenAccessLicense {
+  CC_BY
+  CC_BY_NC
+  CC_BY_ND
+  CC_BY_SA
+  CC_BY_NC_ND
+  ALL_RIGHTS_RESERVED
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id            String       @id @default(cuid())
+  name          String
+  email         String       @unique
+  password      String
+  role          UserRoleEnum @default(AUTHOR)
+  affiliation   String?
+  country       String?
+  bio           String?
+  orcidId       String?
+  profileImage  String?
+  isActive      Boolean      @default(true)
+  emailVerified DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  manuscriptsAsSubmitter  Manuscript[]           @relation("SubmitterManuscripts")
+  manuscriptAuthors       ManuscriptAuthor[]
+  reviewerInvitations     ReviewerInvitation[]   @relation("ReviewerInvitations")
+  invitedByEditor         ReviewerInvitation[]   @relation("InvitedByEditor")
+  reviews                 Review[]
+  editorialDecisions      EditorialDecision[]
+  editorialBoardMemberships EditorialBoardMember[]
+  invoices                Invoice[]
+  payments                Payment[]
+  serviceOrders           ServiceOrder[]
+  notifications           Notification[]
+  auditLogs               AuditLog[]
+  articleAuthors          ArticleAuthor[]
+  editorOfJournals        Journal[]
+
+  @@map("users")
+}
+
+model Journal {
+  id                 String    @id @default(cuid())
+  title              String
+  slug               String    @unique
+  abbreviation       String?
+  issn               String?
+  eissn              String?
+  description        String
+  aimsAndScope       String
+  subjectArea        String
+  editorInChiefId    String?
+  publicationFrequency String?
+  reviewTimeline     String?
+  apcFee             Float?
+  waiverPolicy       String?
+  openAccessPolicy   String?
+  indexingStatus     String?
+  coverImageUrl      String?
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  editorInChief      User?               @relation(fields: [editorInChiefId], references: [id])
+  manuscripts        Manuscript[]
+  articles           Article[]
+  editorialBoard     EditorialBoardMember[]
+  volumes            Volume[]
+
+  @@map("journals")
+}
+
+model EditorialBoardMember {
+  id          String   @id @default(cuid())
+  journalId   String
+  userId      String?
+  name        String
+  title       String?
+  affiliation String?
+  role        String   @default("Editorial Board Member")
+  country     String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  journal     Journal  @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@map("editorial_board_members")
+}
+
+model Volume {
+  id          String   @id @default(cuid())
+  journalId   String
+  number      Int
+  year        Int
+  createdAt   DateTime @default(now())
+
+  // Relations
+  journal     Journal  @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  issues      Issue[]
+  articles    Article[]
+
+  @@unique([journalId, number])
+  @@map("volumes")
+}
+
+model Issue {
+  id          String   @id @default(cuid())
+  volumeId    String
+  number      Int
+  title       String?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  volume      Volume   @relation(fields: [volumeId], references: [id], onDelete: Cascade)
+  articles    Article[]
+
+  @@unique([volumeId, number])
+  @@map("issues")
+}
+
+model Manuscript {
+  id                    String           @id @default(cuid())
+  manuscriptId          String           @unique // e.g. BIOMED-2026-0001
+  title                 String
+  abstract              String
+  keywords String
+  articleType           ArticleType      @default(ORIGINAL_RESEARCH)
+  journalId             String
+  submitterId           String
+  correspondingAuthor   String?
+  coverLetter           String?
+  suggestedReviewers    String?
+  opposedReviewers      String?
+  conflictOfInterest    String?
+  fundingStatement      String?
+  ethicsStatement       String?
+  dataAvailability      String?
+  license               OpenAccessLicense @default(CC_BY)
+  apcConfirmed          Boolean          @default(false)
+  waiverRequested       Boolean          @default(false)
+  waiverReason          String?
+  status                ManuscriptStatus @default(DRAFT)
+  currentStep           Int              @default(1)
+  technicalCheckNotes   String?
+  technicalCheckDone    Boolean          @default(false)
+  submittedAt           DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  // Relations
+  journal               Journal          @relation(fields: [journalId], references: [id])
+  submitter             User             @relation("SubmitterManuscripts", fields: [submitterId], references: [id])
+  authors               ManuscriptAuthor[]
+  files                 ManuscriptFile[]
+  reviewerInvitations   ReviewerInvitation[]
+  reviews               Review[]
+  editorialDecisions    EditorialDecision[]
+  revisions             Revision[]
+  article               Article?
+  invoices              Invoice[]
+
+  @@map("manuscripts")
+}
+
+model ManuscriptAuthor {
+  id           String   @id @default(cuid())
+  manuscriptId String
+  userId       String?
+  name         String
+  email        String
+  affiliation  String?
+  country      String?
+  orcidId      String?
+  isCorresponding Boolean @default(false)
+  order        Int      @default(0)
+
+  // Relations
+  manuscript   Manuscript @relation(fields: [manuscriptId], references: [id], onDelete: Cascade)
+  user         User?      @relation(fields: [userId], references: [id])
+
+  @@map("manuscript_authors")
+}
+
+model ManuscriptFile {
+  id           String   @id @default(cuid())
+  manuscriptId String
+  fileName     String
+  fileType     String   // manuscript, figure, table, supplementary
+  fileUrl      String   // placeholder URL
+  fileSize     Int?
+  uploadedAt   DateTime @default(now())
+
+  // Relations
+  manuscript   Manuscript @relation(fields: [manuscriptId], references: [id], onDelete: Cascade)
+
+  @@map("manuscript_files")
+}
+
+model ReviewerInvitation {
+  id           String           @id @default(cuid())
+  manuscriptId String
+  reviewerId   String
+  invitedById  String
+  status       InvitationStatus @default(PENDING)
+  dueDate      DateTime?
+  message      String?
+  respondedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  manuscript   Manuscript @relation(fields: [manuscriptId], references: [id], onDelete: Cascade)
+  reviewer     User       @relation("ReviewerInvitations", fields: [reviewerId], references: [id])
+  invitedBy    User       @relation("InvitedByEditor", fields: [invitedById], references: [id])
+  review       Review?
+
+  @@map("reviewer_invitations")
+}
+
+model Review {
+  id                     String               @id @default(cuid())
+  manuscriptId           String
+  reviewerId             String
+  invitationId           String?              @unique
+  originalityScore       Int?                 // 1-5
+  methodologyScore       Int?                 // 1-5
+  dataQualityScore       Int?                 // 1-5
+  clarityScore           Int?                 // 1-5
+  ethicalConcerns        String?
+  statisticalConcerns    String?
+  commentsToAuthor       String?
+  confidentialComments   String?
+  recommendation         ReviewRecommendation?
+  conflictOfInterest     String?
+  submittedAt            DateTime?
+  isSubmitted            Boolean              @default(false)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  // Relations
+  manuscript             Manuscript           @relation(fields: [manuscriptId], references: [id], onDelete: Cascade)
+  reviewer               User                 @relation(fields: [reviewerId], references: [id])
+  invitation             ReviewerInvitation?  @relation(fields: [invitationId], references: [id])
+
+  @@map("reviews")
+}
+
+model EditorialDecision {
+  id                  String       @id @default(cuid())
+  manuscriptId        String
+  editorId            String
+  decisionType        DecisionType
+  decisionLetter      String
+  internalNote        String?
+  attachReviewerComments Boolean   @default(true)
+  createdAt           DateTime     @default(now())
+
+  // Relations
+  manuscript          Manuscript   @relation(fields: [manuscriptId], references: [id], onDelete: Cascade)
+  editor              User         @relation(fields: [editorId], references: [id])
+
+  @@map("editorial_decisions")
+}
+
+model Revision {
+  id           String     @id @default(cuid())
+  manuscriptId String
+  roundNumber  Int        @default(1)
+  responseToReviewers String?
+  revisedFileUrl String?
+  submittedAt  DateTime?
+  createdAt    DateTime   @default(now())
+
+  // Relations
+  manuscript   Manuscript @relation(fields: [manuscriptId], references: [id], onDelete: Cascade)
+
+  @@map("revisions")
+}
+
+model Article {
+  id                      String            @id @default(cuid())
+  manuscriptId            String?           @unique
+  journalId               String
+  volumeId                String?
+  issueId                 String?
+  title                   String
+  slug                    String            @unique
+  abstract                String
+  keywords String
+  articleType             ArticleType       @default(ORIGINAL_RESEARCH)
+  doi                     String?
+  fullTextHtml            String?
+  pdfUrl                  String?
+  license                 OpenAccessLicense @default(CC_BY)
+  fundingStatement        String?
+  conflictOfInterest      String?
+  ethicsStatement         String?
+  dataAvailability        String?
+  receivedDate            DateTime?
+  acceptedDate            DateTime?
+  publishedDate           DateTime?
+  isPublished             Boolean           @default(false)
+  viewCount               Int               @default(0)
+  downloadCount           Int               @default(0)
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  // Relations
+  journal                 Journal           @relation(fields: [journalId], references: [id])
+  volume                  Volume?           @relation(fields: [volumeId], references: [id])
+  issue                   Issue?            @relation(fields: [issueId], references: [id])
+  manuscript              Manuscript?       @relation(fields: [manuscriptId], references: [id])
+  authors                 ArticleAuthor[]
+  references              ArticleReference[]
+
+  @@map("articles")
+}
+
+model ArticleAuthor {
+  id          String   @id @default(cuid())
+  articleId   String
+  userId      String?
+  name        String
+  email       String?
+  affiliation String?
+  country     String?
+  orcidId     String?
+  isCorresponding Boolean @default(false)
+  order       Int      @default(0)
+
+  // Relations
+  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@map("article_authors")
+}
+
+model ArticleReference {
+  id          String   @id @default(cuid())
+  articleId   String
+  text        String
+  doi         String?
+  url         String?
+  order       Int      @default(0)
+
+  // Relations
+  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@map("article_references")
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  invoiceId     String?
+  amount        Float
+  currency      String        @default("USD")
+  status        PaymentStatus @default(PENDING)
+  paymentMethod String?
+  transactionId String?
+  notes         String?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id])
+  invoice       Invoice?      @relation(fields: [invoiceId], references: [id])
+
+  @@map("payments")
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  invoiceNumber  String        @unique
+  userId         String
+  manuscriptId   String?
+  serviceOrderId String?
+  amount         Float
+  taxAmount      Float         @default(0)
+  totalAmount    Float
+  currency       String        @default("USD")
+  status         PaymentStatus @default(PENDING)
+  notes          String?
+  dueDate        DateTime?
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  user           User          @relation(fields: [userId], references: [id])
+  manuscript     Manuscript?   @relation(fields: [manuscriptId], references: [id])
+  serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id])
+  payments       Payment[]
+
+  @@map("invoices")
+}
+
+model ServiceOrder {
+  id             String        @id @default(cuid())
+  userId         String
+  serviceType    ServiceType
+  manuscriptTitle String?
+  description    String
+  fileUrl        String?       // placeholder
+  urgency        String        @default("normal") // normal, express, urgent
+  quoteAmount    Float?
+  status         ServiceStatus @default(REQUESTED)
+  deliveredAt    DateTime?
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  user           User          @relation(fields: [userId], references: [id])
+  invoices       Invoice[]
+
+  @@map("service_orders")
+}
+
+model Notification {
+  id          String               @id @default(cuid())
+  userId      String
+  title       String
+  message     String
+  category    NotificationCategory @default(GENERAL)
+  isRead      Boolean              @default(false)
+  link        String?
+  createdAt   DateTime             @default(now())
+
+  // Relations
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model CMSPage {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("cms_pages")
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  isPublished Boolean  @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("announcements")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  entity      String
+  entityId    String?
+  details     String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}

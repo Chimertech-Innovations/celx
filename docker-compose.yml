@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: celx_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: celx_user
+      POSTGRES_PASSWORD: celx_password
+      POSTGRES_DB: celx_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - celx_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U celx_user -d celx_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: celx_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@celx.test
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    volumes:
+      - celx_pgadmin_data:/var/lib/pgadmin
+
+volumes:
+  celx_postgres_data:
+  celx_pgadmin_data:
