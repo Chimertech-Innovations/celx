@@ -23,7 +23,7 @@ export default async function ArticlesPage({ searchParams }: Props) {
     where.OR = [
       { title: { contains: params.q, mode: 'insensitive' } },
       { abstract: { contains: params.q, mode: 'insensitive' } },
-      { keywords: { has: params.q } },
+      { keywords: { contains: params.q, mode: 'insensitive' } },
     ]
   }
   if (params.journal) {
