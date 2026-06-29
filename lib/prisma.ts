@@ -9,6 +9,9 @@ const globalForPrisma = globalThis as unknown as {
 
 const pool = globalForPrisma.pgPool ?? new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes('localhost') || process.env.DATABASE_URL?.includes('127.0.0.1')
+    ? undefined
+    : { rejectUnauthorized: false },
 })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.pgPool = pool
